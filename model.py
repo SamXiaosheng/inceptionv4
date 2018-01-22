@@ -204,16 +204,6 @@ def conv(tensor, name, shape, strides=[1, 1, 1, 1], padding='SAME', activation=t
     return a
 
 
-def fc(tensor, name, dim, activation=tf.nn.relu):
-    W = tf.get_variable(name+"_W", [tensor.shape[1], dim])
-    b = tf.get_variable(name+"_b", [dim])
-    z = tf.matmul(tensor, W, name=name+"_z")
-    h = tf.add(z, b, name=name+'_h')
-    a = activation(h, name=name+'_a')
-
-    return a
-
-
 if __name__ == '__main__':
     main()
 
