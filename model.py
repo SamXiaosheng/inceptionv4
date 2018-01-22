@@ -74,96 +74,6 @@ def main():
             train_step.run(feed_dict={X: images, y: labels})
 
 
-def inception_c(tensor):
-    pool_1_1   = tf.nn.avg_pool(tensor, [1, 3, 3, 1], [1, 1, 1, 1], padding='SAME', name='pool_1_1')
-    conv_1_2   = conv(pool_1_1, 'conv_1_2',   [1, 1, 1536, 256], [1, 1, 1, 1])
-    
-    conv_2_1   = conv(tensor,   'conv_2_1',   [1, 1, 1536, 256], [1, 1, 1, 1])
-
-    conv_3_1   = conv(tensor,   'conv_3_1',   [1, 1, 1536, 384], [1, 1, 1, 1])
-    conv_3_2_1 = conv(conv_3_1, 'conv_3_2_1', [1, 3, 384, 256],  [1, 1, 1, 1])
-    conv_3_2_2 = conv(conv_3_1, 'conv_3_2_2', [3, 1, 384, 256],  [1, 1, 1, 1])
-
-    conv_4_1   = conv(tensor,   'conv_4_1',   [1, 1, 1536, 384], [1, 1, 1, 1])
-    conv_4_2   = conv(conv_4_1, 'conv_4_2',   [1, 3, 384, 448],  [1, 1, 1, 1])
-    conv_4_3   = conv(conv_4_2, 'conv_4_3',   [3, 1, 448, 512],  [1, 1, 1, 1])
-    conv_4_3_1 = conv(conv_4_3, 'conv_4_3_1', [1, 3, 512, 256],  [1, 1, 1, 1])
-    conv_4_3_2 = conv(conv_4_3, 'conv_4_3_2', [3, 1, 512, 256],  [1, 1, 1, 1])
-
-    concat = tf.concat([conv_1_2, conv_2_1, conv_3_2_1, conv_3_2_2, conv_4_3_1, conv_4_3_2], axis=3, name='concat')
-
-    return concat
-
-
-def reduction_b(tensor):
-    pool_1_1 = tf.nn.max_pool(tensor, [1, 3, 3, 1], [1, 2, 2, 1], padding='VALID', name='pool_1_1')
-
-    conv_2_1 = conv(tensor,   'conv_2_1', [1, 1, 1024, 192], [1, 1, 1, 1])
-    conv_2_2 = conv(conv_2_1, 'conv_2_2', [3, 3, 192, 192],  [1, 2, 2, 1], padding='VALID')
-
-    conv_3_1 = conv(tensor,   'conv_3_1', [1, 1, 1024, 256], [1, 1, 1, 1])
-    conv_3_2 = conv(conv_3_1, 'conv_3_2', [1, 7, 256, 256],  [1, 1, 1, 1])
-    conv_3_3 = conv(conv_3_2, 'conv_3_3', [7, 1, 256, 320],  [1, 1, 1, 1])
-    conv_3_4 = conv(conv_3_3, 'conv_3_4', [3, 3, 320, 320],  [1, 2, 2, 1], padding='VALID')
-
-    concat = tf.concat([pool_1_1, conv_2_2, conv_3_4], axis=3, name='concat')
-
-    return concat
-
-
-def inception_b(tensor):
-    pool_1_1 = tf.nn.avg_pool(tensor, [1, 3, 3, 1], [1, 1, 1, 1], padding='SAME', name='pool_1_1')
-    conv_1_2 = conv(pool_1_1, 'conv_1_2', [1, 1, 1024, 128], [1, 1, 1, 1],)
-
-    conv_2_1 = conv(tensor,   'conv_2_1', [1, 1, 1024, 384], [1, 1, 1, 1])
-
-    conv_3_1 = conv(tensor,   'conv_3_1', [1, 1, 1024, 192], [1, 1, 1, 1])
-    conv_3_2 = conv(conv_3_1, 'conv_3_2', [1, 7, 192, 224],  [1, 1, 1, 1])
-    conv_3_3 = conv(conv_3_2, 'conv_3_3', [1, 7, 224, 256],  [1, 1, 1, 1])
-
-    conv_4_1 = conv(tensor,   'conv_4_1', [1, 1, 1024, 192], [1, 1, 1, 1])
-    conv_4_2 = conv(conv_4_1, 'conv_4_2', [1, 7, 192, 192],  [1, 1, 1, 1])
-    conv_4_3 = conv(conv_4_2, 'conv_4_3', [7, 1, 192, 224],  [1, 1, 1, 1])
-    conv_4_4 = conv(conv_4_3, 'conv_4_4', [1, 7, 224, 224],  [1, 1, 1, 1])
-    conv_4_5 = conv(conv_4_4, 'conv_4_5', [7, 1, 224, 256],  [1, 1, 1, 1])
-
-    concat = tf.concat([conv_1_2, conv_2_1, conv_3_3, conv_4_5], axis=3, name='concat')
-
-    return concat
-
-
-def reduction_a(tensor):
-    pool_1_1 = tf.nn.max_pool(tensor, [1, 3, 3, 1], [1, 2, 2, 1], padding='VALID', name='pool_1_1')
-
-    conv_2_1 = conv(tensor,   'conv_2_1', [3, 3, 384, 384], [1, 2, 2, 1], padding='VALID')
-
-    conv_3_1 = conv(tensor,   'conv_3_1', [1, 1, 384, 192], [1, 1, 1, 1])
-    conv_3_2 = conv(conv_3_1, 'conv_3_2', [3, 3, 192, 224], [1, 1, 1, 1])
-    conv_3_3 = conv(conv_3_2, 'conv_3_3', [3, 3, 224, 256], [1, 2, 2, 1], padding='VALID')
-
-    concat = tf.concat([pool_1_1, conv_2_1, conv_3_3], axis=3, name='concat')
-
-    return concat
-
-
-def inception_a(tensor):
-    pool_1_1 = tf.nn.avg_pool(tensor, [1, 3, 3, 1], [1, 1, 1, 1], padding='SAME', name='pool_1_1')
-    conv_1_1 = conv(pool_1_1, 'conv_1_1', [1, 1, 384, 96], [1, 1, 1, 1])
-
-    conv_2_1 = conv(tensor,   'conv_2_1', [1, 1, 384, 96], [1, 1, 1, 1])
-    
-    conv_3_1 = conv(tensor,   'conv_3_1', [1, 1, 384, 64], [1, 1, 1, 1])
-    conv_3_2 = conv(conv_3_1, 'conv_3_2', [3, 3, 64, 96],  [1, 1, 1, 1])
-
-    conv_4_1 = conv(tensor,   'conv_4_1', [1, 1, 384, 64], [1, 1, 1, 1])
-    conv_4_2 = conv(conv_4_1, 'conv_4_2', [3, 3, 64, 96],  [1, 1, 1, 1])
-    conv_4_3 = conv(conv_4_2, 'conv_4_3', [3, 3, 96, 96],  [1, 1, 1, 1])
-
-    concat = tf.concat([conv_1_1, conv_2_1, conv_3_2, conv_4_3], axis=3, name='concat')
-
-    return concat
-
-
 def stem(tensor):
     conv_1     = conv(tensor,     'conv_1',     [3, 3, 1, 32],   [1, 2, 2, 1], padding='VALID')
 
@@ -194,7 +104,111 @@ def stem(tensor):
     return concat_3
 
 
+def inception_a(tensor):
+    pool_1_1 = tf.nn.avg_pool(tensor, [1, 3, 3, 1], [1, 1, 1, 1], padding='SAME', name='pool_1_1')
+    conv_1_1 = conv(pool_1_1, 'conv_1_1', [1, 1, 384, 96], [1, 1, 1, 1])
+
+    conv_2_1 = conv(tensor,   'conv_2_1', [1, 1, 384, 96], [1, 1, 1, 1])
+    
+    conv_3_1 = conv(tensor,   'conv_3_1', [1, 1, 384, 64], [1, 1, 1, 1])
+    conv_3_2 = conv(conv_3_1, 'conv_3_2', [3, 3, 64, 96],  [1, 1, 1, 1])
+
+    conv_4_1 = conv(tensor,   'conv_4_1', [1, 1, 384, 64], [1, 1, 1, 1])
+    conv_4_2 = conv(conv_4_1, 'conv_4_2', [3, 3, 64, 96],  [1, 1, 1, 1])
+    conv_4_3 = conv(conv_4_2, 'conv_4_3', [3, 3, 96, 96],  [1, 1, 1, 1])
+
+    concat = tf.concat([conv_1_1, conv_2_1, conv_3_2, conv_4_3], axis=3, name='concat')
+
+    return concat
+
+
+def reduction_a(tensor):
+    pool_1_1 = tf.nn.max_pool(tensor, [1, 3, 3, 1], [1, 2, 2, 1], padding='VALID', name='pool_1_1')
+
+    conv_2_1 = conv(tensor,   'conv_2_1', [3, 3, 384, 384], [1, 2, 2, 1], padding='VALID')
+
+    conv_3_1 = conv(tensor,   'conv_3_1', [1, 1, 384, 192], [1, 1, 1, 1])
+    conv_3_2 = conv(conv_3_1, 'conv_3_2', [3, 3, 192, 224], [1, 1, 1, 1])
+    conv_3_3 = conv(conv_3_2, 'conv_3_3', [3, 3, 224, 256], [1, 2, 2, 1], padding='VALID')
+
+    concat = tf.concat([pool_1_1, conv_2_1, conv_3_3], axis=3, name='concat')
+
+    return concat
+
+
+def inception_b(tensor):
+    pool_1_1 = tf.nn.avg_pool(tensor, [1, 3, 3, 1], [1, 1, 1, 1], padding='SAME', name='pool_1_1')
+    conv_1_2 = conv(pool_1_1, 'conv_1_2', [1, 1, 1024, 128], [1, 1, 1, 1],)
+
+    conv_2_1 = conv(tensor,   'conv_2_1', [1, 1, 1024, 384], [1, 1, 1, 1])
+
+    conv_3_1 = conv(tensor,   'conv_3_1', [1, 1, 1024, 192], [1, 1, 1, 1])
+    conv_3_2 = conv(conv_3_1, 'conv_3_2', [1, 7, 192, 224],  [1, 1, 1, 1])
+    conv_3_3 = conv(conv_3_2, 'conv_3_3', [1, 7, 224, 256],  [1, 1, 1, 1])
+
+    conv_4_1 = conv(tensor,   'conv_4_1', [1, 1, 1024, 192], [1, 1, 1, 1])
+    conv_4_2 = conv(conv_4_1, 'conv_4_2', [1, 7, 192, 192],  [1, 1, 1, 1])
+    conv_4_3 = conv(conv_4_2, 'conv_4_3', [7, 1, 192, 224],  [1, 1, 1, 1])
+    conv_4_4 = conv(conv_4_3, 'conv_4_4', [1, 7, 224, 224],  [1, 1, 1, 1])
+    conv_4_5 = conv(conv_4_4, 'conv_4_5', [7, 1, 224, 256],  [1, 1, 1, 1])
+
+    concat = tf.concat([conv_1_2, conv_2_1, conv_3_3, conv_4_5], axis=3, name='concat')
+
+    return concat
+
+
+def reduction_b(tensor):
+    pool_1_1 = tf.nn.max_pool(tensor, [1, 3, 3, 1], [1, 2, 2, 1], padding='VALID', name='pool_1_1')
+
+    conv_2_1 = conv(tensor,   'conv_2_1', [1, 1, 1024, 192], [1, 1, 1, 1])
+    conv_2_2 = conv(conv_2_1, 'conv_2_2', [3, 3, 192, 192],  [1, 2, 2, 1], padding='VALID')
+
+    conv_3_1 = conv(tensor,   'conv_3_1', [1, 1, 1024, 256], [1, 1, 1, 1])
+    conv_3_2 = conv(conv_3_1, 'conv_3_2', [1, 7, 256, 256],  [1, 1, 1, 1])
+    conv_3_3 = conv(conv_3_2, 'conv_3_3', [7, 1, 256, 320],  [1, 1, 1, 1])
+    conv_3_4 = conv(conv_3_3, 'conv_3_4', [3, 3, 320, 320],  [1, 2, 2, 1], padding='VALID')
+
+    concat = tf.concat([pool_1_1, conv_2_2, conv_3_4], axis=3, name='concat')
+
+    return concat
+
+
+def inception_c(tensor):
+    pool_1_1   = tf.nn.avg_pool(tensor, [1, 3, 3, 1], [1, 1, 1, 1], padding='SAME', name='pool_1_1')
+    conv_1_2   = conv(pool_1_1, 'conv_1_2',   [1, 1, 1536, 256], [1, 1, 1, 1])
+    
+    conv_2_1   = conv(tensor,   'conv_2_1',   [1, 1, 1536, 256], [1, 1, 1, 1])
+
+    conv_3_1   = conv(tensor,   'conv_3_1',   [1, 1, 1536, 384], [1, 1, 1, 1])
+    conv_3_2_1 = conv(conv_3_1, 'conv_3_2_1', [1, 3, 384, 256],  [1, 1, 1, 1])
+    conv_3_2_2 = conv(conv_3_1, 'conv_3_2_2', [3, 1, 384, 256],  [1, 1, 1, 1])
+
+    conv_4_1   = conv(tensor,   'conv_4_1',   [1, 1, 1536, 384], [1, 1, 1, 1])
+    conv_4_2   = conv(conv_4_1, 'conv_4_2',   [1, 3, 384, 448],  [1, 1, 1, 1])
+    conv_4_3   = conv(conv_4_2, 'conv_4_3',   [3, 1, 448, 512],  [1, 1, 1, 1])
+    conv_4_3_1 = conv(conv_4_3, 'conv_4_3_1', [1, 3, 512, 256],  [1, 1, 1, 1])
+    conv_4_3_2 = conv(conv_4_3, 'conv_4_3_2', [3, 1, 512, 256],  [1, 1, 1, 1])
+
+    concat = tf.concat([conv_1_2, conv_2_1, conv_3_2_1, conv_3_2_2, conv_4_3_1, conv_4_3_2], axis=3, name='concat')
+
+    return concat
+
+
 def conv(tensor, name, shape, strides=[1, 1, 1, 1], padding='SAME', activation=tf.nn.relu):
+    '''
+    Generates a convolutional layer
+
+    Keyword arguments:
+    tensor -- input tensor. Must be indexed by [sample, row, col, ch]
+    name -- the name that will be given to the tensorflow Variable object during runtime
+    shape -- the shape of the kernel. Must be indexed by [row, col, num_input_ch, num_output_ch]
+    strides -- the stride of the convolution. Must be indexed by [sample, row, col, ch]
+    padding -- if set to 'SAME', the output will have the same height and width as the input. If
+               set to 'VALID', the output will have its size reduced by the difference between the
+               tensor size and kernel size
+    activation -- the activation function to use
+    '''
+
     W = tf.get_variable(name+"_W", shape)
     b = tf.get_variable(name+"_b", shape[-1])
     z = tf.nn.conv2d(tensor, W, strides=strides, padding=padding, name=name+'_z')
