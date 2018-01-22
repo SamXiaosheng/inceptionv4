@@ -41,7 +41,7 @@ def main():
         with tf.variable_scope('inception_c_'+str(i)):
             _inception_c[i] = inception_c(_inception_c[i-1])
 
-    with tf.variable_scope('model'):
+    with tf.variable_scope('predict'):
         pool = tf.nn.avg_pool(_inception_c[2], [1, 8, 8, 1], [1, 1, 1, 1], padding='VALID', name='pool')
         pool_f = tf.reshape(pool, [-1, 1536])
 
@@ -53,6 +53,7 @@ def main():
 
         y_hat = tf.nn.softmax(h_fc, name='y_hat')
 
+    with tf.variable_scope('accuracy'):
         correct_prediction = tf.equal(tf.argmax(y_hat, 1), tf.argmax(y, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
