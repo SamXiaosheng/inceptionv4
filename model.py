@@ -2,8 +2,8 @@ import tensorflow as tf
 
 from data_generator import MNISTData
 
-images_path = "./MNIST_train_images.gz"
-labels_path = "./MNIST_train_labels.gz"
+images_path = "data/MNIST_train_images.gz"
+labels_path = "data/MNIST_train_labels.gz"
 mnist = MNISTData(images_path, labels_path)
 
 validate, train = mnist.split(5000)
