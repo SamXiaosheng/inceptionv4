@@ -16,15 +16,16 @@ validate_set, train_set = mnist.split(5000)
 
 def main():
     model = InceptionModel([None, 28, 28, 1], [None, 10])
-    model.train(train_set, epochs=6875)
+    #model.train(train_set, epochs=6875)
 
-    #img, label = validate.get_batch(75)
-    #result = model.classify(img)
-    #print(np.argmax(result, axis=1))
-    #print(np.argmax(label, axis=1))
-    #correct_prediction = np.equal(np.argmax(result, 1), np.argmax(label, 1))
-    #accuracy = np.sum(correct_prediction) / correct_prediction.size
-    #print(accuracy)
+    img, label = validate_set.get_batch(85)
+    result = model.classify(img)
+    print(np.argmax(result, axis=1))
+    print(np.argmax(label, axis=1))
+    correct_prediction = np.equal(np.argmax(result, 1), np.argmax(label, 1))
+    accuracy = np.sum(correct_prediction) / correct_prediction.size
+    print(correct_prediction)
+    print(accuracy)
     
     return
 
@@ -157,7 +158,7 @@ class InceptionModel():
         '''
 
         with tf.Session() as sess:
-            self.saver.restore(sess, self.model_path)
+            self.model_saver.restore(sess, self.model_path)
 
             y = self.y_hat.eval(feed_dict={self.X: image, self.keep_prob: 1.0})
 
