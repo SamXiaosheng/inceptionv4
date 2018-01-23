@@ -15,7 +15,7 @@ validate_set, train_set = mnist.split(5000)
 
 
 def main():
-    model = InceptionMNIST()
+    model = InceptionModel([None, 28, 28, 1], [None, 10])
     model.train(train_set, epochs=6875)
 
     #img, label = validate.get_batch(75)
@@ -33,17 +33,29 @@ class InceptionModel():
     '''
     A base class for an Inception v4 model. Note that the following need to be defined
     by any child classes:
-
-    ckpt_path -- the path where checkpoints will be stored during training
-    model_path -- the path that the final model will be saved to. This will contain only
-                  the forward propagation subgraph
-    X -- a placeholder tensor for the input values, indexed by [sample, row, col, ch]
-    y -- a placeholder tensor for the output values
-    num_class -- a variable containing the number of output classes
     '''
 
-    def __init__(self):
-        pass
+    def __init__(self, input_shape, output_shape, ckpt_path='train_model/model', model_path='saved_model/model'):
+        '''
+        Defines the input and output variables and stores the save locations of the model
+
+        Keyword arguments:
+        input_shape -- The shape of the input tensor, indexed by [sample, row, col, ch]
+        output_shape -- The shape of the output tensor, indexed by [sample, class]
+        ckpt_path -- The save path for checkpoints during training
+        model_path -- The save path for the forward propagation subgraph. The generated model
+                      can be used to classify images without allocating space for the gradients
+        '''
+
+        self.ckpt_path = ckpt_path
+        self.model_path = model_path
+        self.num_class = output_shape[1]
+        self.X = tf.placeholder(tf.float32, input_shape)
+        self.y = tf.placeholder(tf.float32, output_shape)
+
+        self.define_model()
+
+        return
 
     def define_model(self):
         '''
@@ -144,6 +156,7 @@ class InceptionModel():
         Keyword arguments:
         image -- the image, or image array, indexed by [sample, row, col, ch]
         '''
+
         with tf.Session() as sess:
             self.saver.restore(sess, self.model_path)
 
@@ -151,23 +164,6 @@ class InceptionModel():
 
         return y
         
-
-class InceptionMNIST(InceptionModel):
-    '''
-    A class implementing the Inception model using the parameters for the MNIST dataset
-    '''
-
-    def __init__(self, ckpt_path='train_model/model', model_path='saved_model/model'):
-        self.ckpt_path = ckpt_path
-        self.model_path = model_path
-        self.num_class = 10
-        self.X = tf.placeholder(tf.float32, [None, 28, 28, 1])
-        self.y = tf.placeholder(tf.float32, [None, self.num_class])
-
-        self.define_model()
-
-        return
-
 
 def stem(tensor):
     '''
