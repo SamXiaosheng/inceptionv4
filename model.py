@@ -1,80 +1,179 @@
+import os
+
+import numpy as np
 import tensorflow as tf
 
 from data_generator import MNISTData
 
 images_path = "data/MNIST_train_images.gz"
 labels_path = "data/MNIST_train_labels.gz"
+export_path = "saved_model/"
+ckpt_path   = "tmp/ckpt"
+
 mnist = MNISTData(images_path, labels_path)
+validate_set, train_set = mnist.split(5000)
 
-validate, train = mnist.split(5000)
-
-num_class = train.num_classes
 
 def main():
-    X = tf.placeholder(tf.float32, [None, 28, 28, 1])
-    y = tf.placeholder(tf.float32, [None, num_class])
+    model = InceptionMNIST()
+    model.train(train_set, epochs=6875)
 
-    with tf.variable_scope("input"):
-        X_p = tf.image.resize_images(X, [299, 299])
+    #img, label = validate.get_batch(75)
+    #result = model.classify(img)
+    #print(np.argmax(result, axis=1))
+    #print(np.argmax(label, axis=1))
+    #correct_prediction = np.equal(np.argmax(result, 1), np.argmax(label, 1))
+    #accuracy = np.sum(correct_prediction) / correct_prediction.size
+    #print(accuracy)
     
-    with tf.variable_scope("stem"):
-        _stem = stem(X_p)
-    
-    _inception_a = {-1: _stem}
-    for i in range(4):
-        with tf.variable_scope('inception_a_'+str(i)):
-            _inception_a[i] = inception_a(_inception_a[i-1])
+    return
 
-    with tf.variable_scope('reduction_a'):
-        _reduction_a = reduction_a(_inception_a[3])
 
-    _inception_b = {-1: _reduction_a}
-    for i in range(7):
-        with tf.variable_scope('inception_b_'+str(i)):
-            _inception_b[i] = inception_b(_inception_b[i-1])
+class InceptionModel():
+    '''
+    A base class for an Inception v4 model. Note that the following need to be defined
+    by any child classes:
 
-    with tf.variable_scope('reduction_b'):
-        _reduction_b = reduction_b(_inception_b[6])
+    ckpt_path -- the path where checkpoints will be stored during training
+    model_path -- the path that the final model will be saved to. This will contain only
+                  the forward propagation subgraph
+    X -- a placeholder tensor for the input values, indexed by [sample, row, col, ch]
+    y -- a placeholder tensor for the output values
+    num_class -- a variable containing the number of output classes
+    '''
 
-    _inception_c = {-1: _reduction_b}
-    for i in range(3):
-        with tf.variable_scope('inception_c_'+str(i)):
-            _inception_c[i] = inception_c(_inception_c[i-1])
+    def __init__(self):
+        pass
 
-    with tf.variable_scope('predict'):
+    def define_model(self):
+        '''
+        Defines the Inception v4 model.
+        '''
+
+        self.keep_prob = tf.placeholder(tf.float32)
+
+        with tf.variable_scope('input'):
+            _X = tf.image.resize_images(self.X, [299, 299])
+
+        with tf.variable_scope('stem'):
+            _stem = stem(_X)
+
+        _inception_a = {-1: _stem}
+        for i in range(4):
+            with tf.variable_scope('inception_a_'+str(i)):
+                _inception_a[i] = inception_a(_inception_a[i-1])
+
+        with tf.variable_scope('reduction_a'):
+            _reduction_a = reduction_a(_inception_a[3])
+
+        _inception_b = {-1: _reduction_a}
+        for i in range(7):
+            with tf.variable_scope('inception_b_'+str(i)):
+                _inception_b[i] = inception_b(_inception_b[i-1])
+
+        with tf.variable_scope('reduction_b'):
+            _reduction_b = reduction_b(_inception_b[6])
+
+        _inception_c = {-1: _reduction_b}
+        for i in range(3):
+            with tf.variable_scope('inception_c_'+str(i)):
+                _inception_c[i] = inception_c(_inception_c[i-1])
+
         pool = tf.nn.avg_pool(_inception_c[2], [1, 8, 8, 1], [1, 1, 1, 1], padding='VALID', name='pool')
         pool_f = tf.reshape(pool, [-1, 1536])
+        pool_drop = tf.nn.dropout(pool_f, self.keep_prob)
+        self.fc = fcn(pool_drop, 'fc', self.num_class)
 
-        W_fc = tf.get_variable('W_fc', [1536, 10])
-        b_fc = tf.get_variable('b_fc', [10])
+        self.y_hat = tf.nn.softmax(self.fc, name='y_hat')
 
-        z_fc = tf.matmul(pool_f, W_fc, name='z_fc')
-        h_fc = tf.add(z_fc, b_fc, name='h_fc')
+        # Creates a saver object exclusively for the forward propagation subgraph
+        model_variables = tf.get_collection_ref('tf.GraphKeys.MODEL_VARIABLES')
+        self.model_saver = tf.train.Saver(model_variables)
 
-        y_hat = tf.nn.softmax(h_fc, name='y_hat')
+        return
 
-    with tf.variable_scope('accuracy'):
-        correct_prediction = tf.equal(tf.argmax(y_hat, 1), tf.argmax(y, 1))
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-    with tf.variable_scope('train'):
-        h_drop = tf.nn.dropout(h_fc, 0.80)
-        cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=h_fc)
-        train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
+    def train(self, data_generator, batch_size=8, epochs=4000, keep_prob=0.8):
+        '''
+        Defines the variables necessary for training then begins training
 
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+        Keyword arguments:
+        data_generator -- a data_generator object with an implementation of get_batch, as seen
+                          in the data_generator.py module
+        batch_size -- the number of samples to be used in each training batch. Keep memory
+                      constraints in mind
+        epochs -- the number of epochs to be used for training
+        keep_prob -- the keep probability of the dropout layer to be used for training
+        '''
 
-        for i in range(20):
-            images, labels = train.get_batch(1)
-            if i % 1 == 0:
-                train_accuracy = accuracy.eval(feed_dict={X:images, y: labels})
-                print('step %d, training accuracy %g' % (i, train_accuracy))
+        self.cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=self.y, logits=self.fc)
+        self.train_step = tf.train.AdamOptimizer(1e-4).minimize(self.cross_entropy)
 
-            train_step.run(feed_dict={X: images, y: labels})
+        self.correct_prediction = tf.equal(tf.argmax(self.y_hat, 1), tf.argmax(self.y, 1))
+        self.accuracy = tf.reduce_mean(tf.cast(self.correct_prediction, tf.float32))
+
+        # Creates a saver object to generate checkpoints during training. This one also saves
+        # the gradients and the increment of the Adam Optimizer
+        self.saver = tf.train.Saver()
+
+        with tf.Session() as sess:
+            if os.path.isdir('train_model'):
+                self.saver.restore(sess, self.ckpt_path)
+            else:
+                sess.run(tf.global_variables_initializer())
+
+            for i in range(epochs):
+                images, labels = data_generator.get_batch(batch_size)
+                if i % 50 == 0:
+                    train_accuracy = self.accuracy.eval(feed_dict={self.X: images, self.y: labels, self.keep_prob: 1.0})
+                    print('step %d, training accuracy %g' % (i, train_accuracy))
+                if i % 500 == 0:
+                    self.saver.save(sess, self.ckpt_path)
+
+                self.train_step.run(feed_dict={self.X: images, self.y: labels, self.keep_prob: keep_prob})
+
+            self.model_saver.save(sess, self.model_path)
+
+        return
+
+
+    def classify(self, image):
+        '''
+        Classifies the input image based on the trained model in model_path
+
+        Keyword arguments:
+        image -- the image, or image array, indexed by [sample, row, col, ch]
+        '''
+        with tf.Session() as sess:
+            self.saver.restore(sess, self.model_path)
+
+            y = self.y_hat.eval(feed_dict={self.X: image, self.keep_prob: 1.0})
+
+        return y
+        
+
+class InceptionMNIST(InceptionModel):
+    '''
+    A class implementing the Inception model using the parameters for the MNIST dataset
+    '''
+
+    def __init__(self, ckpt_path='train_model/model', model_path='saved_model/model'):
+        self.ckpt_path = ckpt_path
+        self.model_path = model_path
+        self.num_class = 10
+        self.X = tf.placeholder(tf.float32, [None, 28, 28, 1])
+        self.y = tf.placeholder(tf.float32, [None, self.num_class])
+
+        self.define_model()
+
+        return
 
 
 def stem(tensor):
+    '''
+    Generates the graph for the stem subgraph of the Inception v4 model
+    '''
+
     conv_1     = conv(tensor,     'conv_1',     [3, 3, 1, 32],   [1, 2, 2, 1], padding='VALID')
 
     conv_2     = conv(conv_1,     'conv_2',     [3, 3, 32, 32],  [1, 1, 1, 1], padding='VALID')
@@ -105,6 +204,10 @@ def stem(tensor):
 
 
 def inception_a(tensor):
+    '''
+    Generates the graph for the Inception A subgraph of the Inception v4 model
+    '''
+
     pool_1_1 = tf.nn.avg_pool(tensor, [1, 3, 3, 1], [1, 1, 1, 1], padding='SAME', name='pool_1_1')
     conv_1_1 = conv(pool_1_1, 'conv_1_1', [1, 1, 384, 96], [1, 1, 1, 1])
 
@@ -123,6 +226,10 @@ def inception_a(tensor):
 
 
 def reduction_a(tensor):
+    '''
+    Generates the graph for the Inception A subgraph of the Inception v4 model
+    '''
+
     pool_1_1 = tf.nn.max_pool(tensor, [1, 3, 3, 1], [1, 2, 2, 1], padding='VALID', name='pool_1_1')
 
     conv_2_1 = conv(tensor,   'conv_2_1', [3, 3, 384, 384], [1, 2, 2, 1], padding='VALID')
@@ -137,6 +244,10 @@ def reduction_a(tensor):
 
 
 def inception_b(tensor):
+    '''
+    Generates the graph for the Inception A subgraph of the Inception v4 model
+    '''
+
     pool_1_1 = tf.nn.avg_pool(tensor, [1, 3, 3, 1], [1, 1, 1, 1], padding='SAME', name='pool_1_1')
     conv_1_2 = conv(pool_1_1, 'conv_1_2', [1, 1, 1024, 128], [1, 1, 1, 1],)
 
@@ -158,6 +269,10 @@ def inception_b(tensor):
 
 
 def reduction_b(tensor):
+    '''
+    Generates the graph for the Inception A subgraph of the Inception v4 model
+    '''
+
     pool_1_1 = tf.nn.max_pool(tensor, [1, 3, 3, 1], [1, 2, 2, 1], padding='VALID', name='pool_1_1')
 
     conv_2_1 = conv(tensor,   'conv_2_1', [1, 1, 1024, 192], [1, 1, 1, 1])
@@ -174,6 +289,10 @@ def reduction_b(tensor):
 
 
 def inception_c(tensor):
+    '''
+    Generates the graph for the Inception A subgraph of the Inception v4 model
+    '''
+
     pool_1_1   = tf.nn.avg_pool(tensor, [1, 3, 3, 1], [1, 1, 1, 1], padding='SAME', name='pool_1_1')
     conv_1_2   = conv(pool_1_1, 'conv_1_2',   [1, 1, 1536, 256], [1, 1, 1, 1])
     
@@ -200,7 +319,7 @@ def conv(tensor, name, shape, strides=[1, 1, 1, 1], padding='SAME', activation=t
 
     Keyword arguments:
     tensor -- input tensor. Must be indexed by [sample, row, col, ch]
-    name -- the name that will be given to the tensorflow Variable object during runtime
+    name -- the name that will be given to the tensorflow Variable in the GraphDef
     shape -- the shape of the kernel. Must be indexed by [row, col, num_input_ch, num_output_ch]
     strides -- the stride of the convolution. Must be indexed by [sample, row, col, ch]
     padding -- if set to 'SAME', the output will have the same height and width as the input. If
@@ -211,12 +330,34 @@ def conv(tensor, name, shape, strides=[1, 1, 1, 1], padding='SAME', activation=t
 
     W = tf.get_variable(name+"_W", shape)
     b = tf.get_variable(name+"_b", shape[-1])
+    tf.add_to_collection('tf.GraphKeys.MODEL_VARIABLES', W)
+    tf.add_to_collection('tf.GraphKeys.MODEL_VARIABLES', b)
     z = tf.nn.conv2d(tensor, W, strides=strides, padding=padding, name=name+'_z')
     h = tf.add(z, b, name=name+'_h')
     a = activation(h, name=name+'_a')
 
     return a
 
+
+def fcn(tensor, name, num_out):
+    '''
+    Generates a fully connected layer. Does not apply an activation function
+
+    Keyword arguments:
+    tensor -- input tensor. Must be indexed by [sample, ch]
+    name -- the name that will be given to the tensorflow Variable in the GraphDef
+    num_out -- the size of the output tensor
+    '''
+
+    W_fc = tf.get_variable('W_fc', [tensor.shape[1], num_out])
+    b_fc = tf.get_variable('b_fc', [num_out])
+    tf.add_to_collection('tf.GraphKeys.MODEL_VARIABLES', W_fc)
+    tf.add_to_collection('tf.GraphKeys.MODEL_VARIABLES', b_fc)
+
+    z_fc = tf.matmul(tensor, W_fc, name='z_fc')
+    h_fc = tf.add(z_fc, b_fc, name='h_fc')
+
+    return h_fc
 
 if __name__ == '__main__':
     main()
