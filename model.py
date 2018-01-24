@@ -94,7 +94,7 @@ class InceptionModel():
         pool = tf.nn.avg_pool(_inception_c[2], [1, 8, 8, 1], [1, 1, 1, 1], padding='VALID', name='pool')
         pool_f = tf.reshape(pool, [-1, 1536])
         pool_drop = tf.nn.dropout(pool_f, self.keep_prob)
-        self.fc = fcn(pool_drop, 'fc', self.num_class)
+        self.fc = dense(pool_drop, 'fc', self.num_class)
 
         self.y_hat = tf.nn.softmax(self.fc, name='y_hat')
 
@@ -335,7 +335,7 @@ def conv(tensor, name, shape, strides=[1, 1, 1, 1], padding='SAME', activation=t
     return a
 
 
-def fcn(tensor, name, num_out):
+def dense(tensor, name, num_out):
     '''
     Generates a fully connected layer. Does not apply an activation function
 
