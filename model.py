@@ -223,7 +223,7 @@ def inception_a(tensor):
 
 def reduction_a(tensor):
     '''
-    Generates the graph for the Inception A subgraph of the Inception v4 model
+    Generates the graph for the Reduction A subgraph of the Inception v4 model
     '''
 
     pool_1_1 = tf.nn.max_pool(tensor, [1, 3, 3, 1], [1, 2, 2, 1], padding='VALID', name='pool_1_1')
@@ -241,7 +241,7 @@ def reduction_a(tensor):
 
 def inception_b(tensor):
     '''
-    Generates the graph for the Inception A subgraph of the Inception v4 model
+    Generates the graph for the Inception B subgraph of the Inception v4 model
     '''
 
     pool_1_1 = tf.nn.avg_pool(tensor, [1, 3, 3, 1], [1, 1, 1, 1], padding='SAME', name='pool_1_1')
@@ -266,7 +266,7 @@ def inception_b(tensor):
 
 def reduction_b(tensor):
     '''
-    Generates the graph for the Inception A subgraph of the Inception v4 model
+    Generates the graph for the Reduction B subgraph of the Inception v4 model
     '''
 
     pool_1_1 = tf.nn.max_pool(tensor, [1, 3, 3, 1], [1, 2, 2, 1], padding='VALID', name='pool_1_1')
@@ -286,7 +286,7 @@ def reduction_b(tensor):
 
 def inception_c(tensor):
     '''
-    Generates the graph for the Inception A subgraph of the Inception v4 model
+    Generates the graph for the Inception C subgraph of the Inception v4 model
     '''
 
     pool_1_1   = tf.nn.avg_pool(tensor, [1, 3, 3, 1], [1, 1, 1, 1], padding='SAME', name='pool_1_1')
