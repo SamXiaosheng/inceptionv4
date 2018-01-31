@@ -50,7 +50,7 @@ class MLData:
             ix = np.copy(self.unused_ix)
 
             batch_inputs1 = self.inputs[ix, :, :, :]
-            batch_outputs1 = self.inputs[ix, :]
+            batch_outputs1 = self.outputs[ix, :]
 
             self.unused_ix = np.setdiff1d(np.array(range(self.num_samples)), ix)
 
